@@ -19,6 +19,10 @@ public class TrataRequisicao implements Runnable {
 	String tipoLista;
 	public static ArrayList<String> listas = new ArrayList<>();
 	String ipCliente;
+	String url;
+	ArrayList<SitesAcessados> acessos = new ArrayList<SitesAcessados>();
+	DataOutputStream vai_cliente;
+	BufferedReader chega_cliente_buffer;
 		
 	public TrataRequisicao(Socket conexao, String tipoLista) {
 		this.conexao = conexao;
@@ -32,6 +36,32 @@ public class TrataRequisicao implements Runnable {
 	 * @param tipoLista
 	 * @throws IOException
 	 */
+	
+	public void estabeleConexao(Socket conexao) throws IOException{
+			
+		System.out.println("CHEGUEI.");
+		InputStream chega_cliente;
+		chega_cliente = conexao.getInputStream();
+
+		vai_cliente = new DataOutputStream(conexao.getOutputStream());
+		chega_cliente_buffer = new BufferedReader(new InputStreamReader(chega_cliente));
+
+	}
+	
+	public void pegaRequisicao(BufferedReader chega_cliente_buffer) throws IOException{
+			  
+		//Colocando numa string a leitura da linha do BUfferedReader
+		String requestLine = chega_cliente_buffer.readLine();
+        
+        // Transformando a string numa StringTokenizer para recuperar a URL
+        StringTokenizer tokens = new StringTokenizer(requestLine);
+        tokens.nextToken();  // skip over the method, which should be "GET"
+        url = tokens.nextToken();
+        
+        System.out.println(url);
+                
+	}
+	
 	public  void gravandoListas(String tipoLista) throws IOException{
 		
 		if(tipoLista == "w"){
@@ -65,12 +95,12 @@ public class TrataRequisicao implements Runnable {
 	 * @return boolean 
 	 * @throws FileNotFoundException
 	 */
-	public static boolean verificaPermissaoPraPagina(String tipoLista) throws FileNotFoundException{
+	public static boolean verificaPermissaoPraPagina(String tipoLista, String url) throws FileNotFoundException{
 	
 		if(tipoLista == "w"){
 			
 			for(String site : listas){			
-				if(site == "4"){					
+				if(site == url){					
 					return true;
 				}
 			}
@@ -79,7 +109,7 @@ public class TrataRequisicao implements Runnable {
 		}else{
 			
 			for(String site : listas){			
-				if(site == "4"){					
+				if(site == url){					
 					return false;
 				}
 			}
@@ -95,6 +125,38 @@ public class TrataRequisicao implements Runnable {
 		 ipCliente = conexao.getRemoteSocketAddress().toString();
 	}
 	
+	
+	public static void adicionaSiteAcessado(String url, ArrayList<SitesAcessados> acessos){
+		
+		SitesAcessados auxiliar = null;
+		
+		for(int i=0;i<acessos.size();i++){ 
+			auxiliar = acessos.get(i);
+			
+			if(url == auxiliar.getSite()){
+				auxiliar.setCont(auxiliar.getCont() +1);
+				break;
+			}
+		} 
+		
+		auxiliar.setSite(url);
+		auxiliar.setCont(1);
+		
+		acessos.add(auxiliar);
+	}
+	
+	public void imprimeSitesAcessados(ArrayList<SitesAcessados> acessos){
+		
+		SitesAcessados auxiliar = null;
+		
+		for(int i=0;i<acessos.size();i++){ 
+			auxiliar = acessos.get(i);
+		
+			System.out.println("O site " +auxiliar.getSite() + "foi visitado " +auxiliar.getCont() +" vezes.");
+		}
+		
+	}
+	
 	public static void recuperaURL(){
 		//recuperar a URL requisita do cliente e salva no arquivo .txt 
 		//todos os sites requisitados . Também grava o tempo necessário para recuperar a página
@@ -108,32 +170,20 @@ public class TrataRequisicao implements Runnable {
 	public void run() {
 		// TODO Auto-generated method stub
 		try {
-				InputStream chega_cliente;
-					chega_cliente = conexao.getInputStream();
-
-				DataOutputStream vai_cliente = new DataOutputStream(conexao.getOutputStream());
+			System.out.println("CHEGUEI.");		
+			estabeleConexao(conexao);
+			pegaRequisicao(chega_cliente_buffer);
+			System.out.println("O IP do cliente é : " +ipCliente +".");
 			
-				BufferedReader chega_cliente_buffer = new BufferedReader(new InputStreamReader(chega_cliente));
-
-		        // Get the request line of the HTTP request message.
-//		        while(chega_clienete=)
+			if(verificaPermissaoPraPagina(tipoLista, url)){
 				
-				String requestLine = chega_cliente_buffer.readLine();
-
-		        
-		        // Extract the filename from the request line.
-		        StringTokenizer tokens = new StringTokenizer(requestLine);
-		        tokens.nextToken();  // skip over the method, which should be "GET"
-		        String url = tokens.nextToken();
-		        System.out.println(url);
-		        
-		        URL pega_url = new URL(url);
-			
-		       penStram chega_url =  pega_url.openStream();
-			
-			if(verificaPermissaoPraPagina(tipoLista)){
+				adicionaSiteAcessado(url, acessos);
+				imprimeSitesAcessados(acessos);
 				recuperaURL();
 				gravaURL();
+			
+			}else{				
+				System.out.println("Página bloqueada !");
 			}
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -144,5 +194,6 @@ public class TrataRequisicao implements Runnable {
 		}
 		
 	}
+
 
 }
