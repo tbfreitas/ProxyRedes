@@ -128,7 +128,7 @@ public class TrataRequisicao implements Runnable {
 	
 	public static void adicionaSiteAcessado(String url, ArrayList<SitesAcessados> acessos){
 		
-		SitesAcessados auxiliar = null;
+		SitesAcessados auxiliar = new SitesAcessados();
 		
 		for(int i=0;i<acessos.size();i++){ 
 			auxiliar = acessos.get(i);
@@ -170,17 +170,18 @@ public class TrataRequisicao implements Runnable {
 	public void run() {
 		// TODO Auto-generated method stub
 		try {
-			System.out.println("CHEGUEI.");		
-			estabeleConexao(conexao);
-			pegaRequisicao(chega_cliente_buffer);
-			System.out.println("O IP do cliente é : " +ipCliente +".");
+			
+				estabeleConexao(conexao);
+				pegaRequisicao(chega_cliente_buffer);
+				verificaCliente();
+				System.out.println("O IP do cliente é : " +ipCliente +".");
 			
 			if(verificaPermissaoPraPagina(tipoLista, url)){
 				
 				adicionaSiteAcessado(url, acessos);
-				imprimeSitesAcessados(acessos);
 				recuperaURL();
 				gravaURL();
+				imprimeSitesAcessados(acessos);
 			
 			}else{				
 				System.out.println("Página bloqueada !");
@@ -192,7 +193,7 @@ public class TrataRequisicao implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+			
 	}
 
 

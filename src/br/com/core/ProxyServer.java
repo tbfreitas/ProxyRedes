@@ -22,7 +22,7 @@ public class ProxyServer {
 		String tipoLista = args[2];
 		String modoBloqueio;
 		
-		if(tipoLista == "b"){
+		if(tipoLista.equals("b")){
 			modoBloqueio = "BlackList.";
 		}else{
 			modoBloqueio = "WhiteList.";
