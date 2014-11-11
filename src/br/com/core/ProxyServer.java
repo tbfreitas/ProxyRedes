@@ -36,6 +36,7 @@ public class ProxyServer {
 		System.out.println("A porta usada pelo servidor é a " +porta);
 		System.out.println("O IP do servidor é o " +ip);
 		System.out.println("O tipo de lista é a " +modoBloqueio);
+		System.out.println("");
 		
 		/**
 		 * Abertura do servidor Socket que recebe os parametros passados
