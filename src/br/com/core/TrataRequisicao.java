@@ -19,7 +19,7 @@ public class TrataRequisicao implements Runnable {
 
 	Socket conexao;
 	String tipoLista;
-	public static ArrayList<String> listas = new ArrayList<>();
+	ArrayList<String> listas = new ArrayList<>();
 	String ipCliente;
 	String url;
 	ArrayList<SitesAcessados> acessos = new ArrayList<SitesAcessados>();
@@ -27,19 +27,12 @@ public class TrataRequisicao implements Runnable {
 	BufferedReader chega_cliente_buffer;
 	String requestLine;
 	final static String CRLF = "\r\n";
+	URL recuperarURL;
 
 	public TrataRequisicao(Socket conexao, String tipoLista) {
 		this.conexao = conexao;
 		this.tipoLista = tipoLista;
 	}
-
-	/**
-	 * Classe que grava em um arrayList todos os sites da white 
-	 * black lists, gravados no arquivos .txt
-	 * 
-	 * @param tipoLista
-	 * @throws IOException
-	 */
 
 	public void estabeleConexao(Socket conexao) throws IOException{
 
@@ -61,12 +54,20 @@ public class TrataRequisicao implements Runnable {
 		tokens.nextToken();  // skip over the method, which should be "GET"
 		url = tokens.nextToken();
 		
+		 recuperarURL = new URL(url);
 		
-
 		System.out.println(url);
 
 	}
 
+
+	/**
+	 * Classe que grava em um arrayList todos os sites da white 
+	 * black lists, gravados no arquivos .txt
+	 * 
+	 * @param tipoLista
+	 * @throws IOException
+	 */
 	public  void gravandoListas(String tipoLista) throws IOException{
 
 		if(tipoLista == "w"){
@@ -162,15 +163,19 @@ public class TrataRequisicao implements Runnable {
 
 	}
 
-	public static void recuperaURL(String url,String requestLine, BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente, Socket conexao) throws Exception{
-
-		url = "." + url;
+	public static void recuperaURL(URL recuperarURL,String url,String requestLine, BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente, Socket conexao) throws Exception{
+				
+		URLConnection urlC = recuperarURL.openConnection();
+		
+		BufferedReader in = new BufferedReader( new InputStreamReader(urlC.getInputStream()));
 		
 		// Open the requested file.
 		FileInputStream fis = null ;
 		boolean fileExists = true ;
+		
 		try {
-			fis = new FileInputStream(url);
+			fis = (FileInputStream) recuperarURL.openConnection().getInputStream();
+			fis.
 		} catch (FileNotFoundException e) {
 			fileExists = false ;
 		}
@@ -203,6 +208,7 @@ public class TrataRequisicao implements Runnable {
 					"<HEAD><TITLE>Not Found</TITLE></HEAD>" +
 					"<BODY>Not Found</BODY></HTML>";
 		}
+		
 		// Send the status line.
 		vai_cliente.writeBytes(statusLine);
 
@@ -266,7 +272,7 @@ public void run() {
 		if(verificaPermissaoPraPagina(tipoLista, url,listas) == true){
 
 			adicionaSiteAcessado(url, acessos);
-			recuperaURL(url,requestLine, chega_cliente_buffer,vai_cliente,conexao);
+			recuperaURL(recuperarURL,url,requestLine, chega_cliente_buffer,vai_cliente,conexao);
 			gravaURL();
 			imprimeSitesAcessados(acessos);
 
