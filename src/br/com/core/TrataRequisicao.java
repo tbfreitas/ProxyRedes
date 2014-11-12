@@ -53,11 +53,9 @@ public class TrataRequisicao implements Runnable {
 		StringTokenizer tokens = new StringTokenizer(requestLine);
 		tokens.nextToken();  // skip over the method, which should be "GET"
 		url = tokens.nextToken();
-		
-		 recuperarURL = new URL(url);
-		
-		System.out.println(url);
 
+		recuperarURL = new URL(url);
+			
 	}
 
 
@@ -124,30 +122,31 @@ public class TrataRequisicao implements Runnable {
 	}
 
 	/**
-	 * Método para verificar IP do cliente
+	 * Método para verificar IP do cliente e porta utilizada pelo mesmo
 	 */
 	public  void verificaCliente(){
 
-		ipCliente = conexao.getRemoteSocketAddress().toString();
+		System.out.println(ipCliente = conexao.getRemoteSocketAddress().toString());
+		
 	}
 
 
-	public static void adicionaSiteAcessado(String url, ArrayList<SitesAcessados> acessos){
+	public  static void adicionaSiteAcessado(String url, ArrayList<SitesAcessados> acessos){
 
 		SitesAcessados auxiliar = new SitesAcessados();
-
+				
 		for(int i=0;i<acessos.size();i++){ 
 			auxiliar = acessos.get(i);
-
+					
 			if(url == auxiliar.getSite()){
 				auxiliar.setCont(auxiliar.getCont() +1);
-				break;
+				return;
 			}
 		} 
-
+		
 		auxiliar.setSite(url);
 		auxiliar.setCont(1);
-
+		
 		acessos.add(auxiliar);
 	}
 
@@ -164,133 +163,73 @@ public class TrataRequisicao implements Runnable {
 	}
 
 	public static void recuperaURL(URL recuperarURL,String url,String requestLine, BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente, Socket conexao) throws Exception{
-				
+
 		URLConnection urlC = recuperarURL.openConnection();
 		
-		BufferedReader in = new BufferedReader( new InputStreamReader(urlC.getInputStream()));
+		urlC.connect();
 		
-		// Open the requested file.
-		FileInputStream fis = null ;
-		boolean fileExists = true ;
+		InputStream teste;
 		
-		try {
-			fis = (FileInputStream) recuperarURL.openConnection().getInputStream();
-			fis.
-		} catch (FileNotFoundException e) {
-			fileExists = false ;
-		}
-		
-		if(fileExists == true){
-			System.out.println("Teste");
-		}
-
-		// Debug info for private use
-		System.out.println("Incoming!!!");
-		System.out.println(requestLine);
-
-		String headerLine = null;
-		while ((headerLine = chega_cliente_buffer.readLine()).length() != 0) {
-			System.out.println(headerLine +"teste");
-		}
-
-		
-		// Construct the response message.
-		String statusLine = null;
-		String contentTypeLine = null;
-		String entityBody = null;
-		if (fileExists) {
-			statusLine = "HTTP/1.0 200 OK" + CRLF;
-			contentTypeLine = "Content-Type: " + contentType(url) + CRLF;
-		} else {
-			statusLine = "HTTP/1.0 404 Not Found" + CRLF;
-			contentTypeLine = "Content-Type: text/html" + CRLF;
-			entityBody = "<HTML>" + 
-					"<HEAD><TITLE>Not Found</TITLE></HEAD>" +
-					"<BODY>Not Found</BODY></HTML>";
-		}
-		
-		// Send the status line.
-		vai_cliente.writeBytes(statusLine);
-
-		// Send the content type line.
-		vai_cliente.writeBytes(contentTypeLine);
-
-		// Send a blank line to indicate the end of the header lines.
-		vai_cliente.writeBytes(CRLF);
+		teste = urlC.getInputStream();
 
 		// Send the entity body.
-		if (fileExists) {
-			sendBytes(fis, vai_cliente);
-			fis.close();
-		} else {
-			vai_cliente.writeBytes(entityBody) ;
-		}
+		sendBytes(teste, vai_cliente);
 
 		// Close streams and socket.
 		vai_cliente.close();
 		chega_cliente_buffer.close();
-		conexao.close();
+		conexao.close(); 
 	}
 
-	private static void sendBytes(FileInputStream fis, OutputStream os) throws Exception {
+
+	private static void sendBytes(InputStream teste, OutputStream os) throws Exception {
 		// Construct a 1K buffer to hold bytes on their way to the socket.
 		byte[] buffer = new byte[1024];
 		int bytes = 0;
 
 		// Copy requested file into the socket's output stream.
-		while ((bytes = fis.read(buffer)) != -1) {
+		while ((bytes = teste.read(buffer)) != -1) {
 			os.write(buffer, 0, bytes);
 		}
 	}
 
-	private static String contentType(String fileName) {
-		if(fileName.endsWith(".htm") || fileName.endsWith(".html")) {
-			return "text/html";
-		}
-		if(fileName.endsWith(".ram") || fileName.endsWith(".ra")) {
-			return "audio/x-pn-realaudio";
-		}
-		return "application/octet-stream" ;
+	public  void imprimirBloqueio(){
+		//grava em um arquivo txt, os sites mais acessados
 	}
 
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		try {
 
-public static void gravaURL(){
-	//grava em um arquivo txt, os sites mais acessados
-}
+			estabeleConexao(conexao);
+			pegaRequisicao(chega_cliente_buffer);
+			gravandoListas(tipoLista);
+			verificaCliente();
+			
+			if(verificaPermissaoPraPagina(tipoLista, url,listas) == true){
 
-@Override
-public void run() {
-	// TODO Auto-generated method stub
-	try {
+				adicionaSiteAcessado(url, acessos);
+				recuperaURL(recuperarURL,url,requestLine, chega_cliente_buffer,vai_cliente,conexao);
+				//imprimeSitesAcessados(acessos);
 
-		estabeleConexao(conexao);
-		pegaRequisicao(chega_cliente_buffer);
-		gravandoListas(tipoLista);
-		verificaCliente();
-		System.out.println("O IP do cliente é : " +ipCliente +".");
-
-		if(verificaPermissaoPraPagina(tipoLista, url,listas) == true){
-
-			adicionaSiteAcessado(url, acessos);
-			recuperaURL(recuperarURL,url,requestLine, chega_cliente_buffer,vai_cliente,conexao);
-			gravaURL();
-			imprimeSitesAcessados(acessos);
-
-		}else{				
-			System.out.println("Página bloqueada !");
+			}else{				
+				System.out.println("Página bloqueada !");
+			}
+			
+			
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-	} catch (FileNotFoundException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	} catch (IOException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	} catch (Exception e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
 
-}
+	}
 
 
 }
