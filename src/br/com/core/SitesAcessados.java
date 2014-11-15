@@ -16,7 +16,4 @@ public class SitesAcessados {
 	public void setCont(int cont) {
 		this.cont = cont;
 	}
-	
-	
-
 }
