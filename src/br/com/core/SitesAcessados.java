@@ -4,6 +4,7 @@ public class SitesAcessados {
 	
 	private String site;
 	private int cont;
+	
 	public String getSite() {
 		return site;
 	}

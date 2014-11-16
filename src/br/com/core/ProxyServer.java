@@ -2,10 +2,17 @@ package br.com.core;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 
 
 /**
@@ -24,11 +31,10 @@ public class ProxyServer {
 		InetAddress ip = InetAddress.getByName(args[1]);
 		String tipoLista = args[2];
 		String modoBloqueio;
-		
-		
-		//GerenciadorConexoes gerenciador = new GerenciadorConexoes();
-		//Thread gc = new Thread( (Runnable) (gerenciador));
-		//gc.start();
+			
+		GerenciadorConexoes gerenciador = new GerenciadorConexoes();
+		Thread gc = new Thread( (Runnable) (gerenciador));
+		gc.start();
 		
 		if(tipoLista.equals("b")){
 			modoBloqueio = "BlackList.";
@@ -51,19 +57,23 @@ public class ProxyServer {
 		ServerSocket conexao = new ServerSocket(porta, 50, ip);
 		
 		
-		while(true){
-			
-				 Socket conex = conexao.accept();
-				
+		while(!gerenciador.finish()){
+								
+				Socket conex = conexao.accept();
+							 		 
 				 Runnable requisicao = new TrataRequisicao(conex, tipoLista);
 				 
 				 Thread	thread = new Thread(requisicao);
 				 
 				 thread.start();
 				 
-				// gerenciador.addCliente(thread);
+				gerenciador.addCliente(thread);			
+				
 		}
 		
 	}
-
 }
+
+
+	
+

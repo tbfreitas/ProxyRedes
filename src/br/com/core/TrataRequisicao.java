@@ -5,14 +5,18 @@ import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.StringTokenizer;
 import java.net.*;
 
@@ -55,8 +59,7 @@ public class TrataRequisicao implements Runnable {
 		chega_cliente = conexao.getInputStream();
 
 		vai_cliente = new DataOutputStream(conexao.getOutputStream());
-		chega_cliente_buffer = new BufferedReader(new InputStreamReader(
-				chega_cliente));
+		chega_cliente_buffer = new BufferedReader(new InputStreamReader(chega_cliente));
 
 	}
 
@@ -74,14 +77,22 @@ public class TrataRequisicao implements Runnable {
 		requisicao = chega_cliente_buffer.readLine();
 
 		// Transformando a string numa StringTokenizer para recuperar a URL
-		StringTokenizer tokens = new StringTokenizer(requisicao);
-		tokens.nextToken();
-		url = tokens.nextToken();
+		try{
+			StringTokenizer tokens = new StringTokenizer(requisicao);
+			tokens.nextToken();
+			url = tokens.nextToken();
+		}catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		
+		// Se a url nao comecar com http, eh concatenada na String
+		// para não dar erro
+
 		if(!url.startsWith("http")) {
 			url = "http://"+url;
 		}
-		
+
 		try {
 			recuperarURL = new URL(url);
 		} catch (Exception e) {
@@ -91,7 +102,7 @@ public class TrataRequisicao implements Runnable {
 	}
 
 	/**
-	 * Classe que grava em um arrayList todos os sites da white black lists,
+	 * Classe que grava em um arrayList todos os sites da white ou  black lists,
 	 * gravados no arquivos .txt
 	 * 
 	 * @param tipoLista
@@ -154,61 +165,21 @@ public class TrataRequisicao implements Runnable {
 	}
 
 	/**
-	 * Método para verificar IP do cliente e porta utilizada pelo mesmo e
+	 * Método para verificar IP do cliente e porta utilizada pelo mesmo e jogar numa String
 	 * imprimir
 	 */
-	public void verificaCliente() {
+	public String verificaCliente() {
 
-		ipCliente = conexao.getRemoteSocketAddress().toString();
-		//System.out.println("O ip do cliente e  porta que este utiliza é a : "
-		//+ ipCliente);
-
-	}
-
-	public static void adicionaSiteAcessado(String url,
-			ArrayList<SitesAcessados> acessos) throws IOException {
-
-		SitesAcessados auxiliar = new SitesAcessados();
-
-		for (int i = 0; i < acessos.size(); i++) {
-			auxiliar = acessos.get(i);
-
-			if (url == auxiliar.getSite()) {
-				auxiliar.setCont(auxiliar.getCont() + 1);
-				return;
-			}
-		}
-
-		auxiliar.setSite(url);
-		auxiliar.setCont(1);
-
-		acessos.add(auxiliar);
-
-	}
-
-	/**
-	 * Metodo de teste para impressao dos sites acessados, percorrendo a
-	 * arraylist de acessos
-	 * 
-	 * @param acessos
-	 */
-	public void imprimeSitesAcessados(ArrayList<SitesAcessados> acessos) {
-
-		SitesAcessados auxiliar = null;
-
-		for (int i = 0; i < acessos.size(); i++) {
-			auxiliar = acessos.get(i);
-
-			System.out.println("O site " + auxiliar.getSite() + "foi visitado "
-					+ auxiliar.getCont() + " vezes.");
-		}
-
+		return ipCliente = conexao.getRemoteSocketAddress().toString();
+		
 	}
 
 	/**
 	 * Metodo que abre conexao com a URL desejada, recupera suas informacoes e
 	 * salva num InputStream para passar para o cliente atraves do metodo
-	 * sendBytes
+	 * sendBytes.
+	 * 
+	 * E salvo tambem no arquivo IPS, o ip do cliente que fez a requisicao
 	 * 
 	 * @param recuperarURL
 	 * @param chega_cliente_buffer
@@ -218,11 +189,22 @@ public class TrataRequisicao implements Runnable {
 	 */
 	public void recuperaURL(URL recuperarURL,BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente,Socket conexao) throws Exception {
 
-		URLConnection urlC = recuperarURL.openConnection();
+		String i[] = ipCliente.split(":");
+		String salva = i[0];
 		
-		InputStream in = urlC.getInputStream();
-		sendBytes(in, vai_cliente);
+		Writer arquivo2 = new BufferedWriter(new FileWriter("IPS.txt", true));
+		arquivo2.append(salva+"\r\n");
+		arquivo2.close();
+		
+		arquivo2 = new BufferedWriter(new FileWriter("URLSacessados.txt", true));
+		arquivo2.append(url+"\r\n");
+		arquivo2.close();
+		
+		URLConnection urlC = recuperarURL.openConnection();
 
+		InputStream in = urlC.getInputStream();
+		sendBytes(in, vai_cliente);			
+		
 		vai_cliente.close();
 		chega_cliente_buffer.close();
 		conexao.close();
@@ -247,14 +229,55 @@ public class TrataRequisicao implements Runnable {
 		}
 	}
 
+	/**
+	 * 
+	 * Metodo chamado quando a URL eh bloqueada. Primeiro , a conexao eh aberta,
+	 * em seguida, eh criado um arquivo txt para salvar o conteudo html da pagina bloqueada.
+	 * Logo apos, eh salvo no arquivo URLSbarradas a ULR que foi barrada jntamente com o IP 
+	 * que fez a requisicao.
+	 * No final , eh voltado ao cliente a mensagem de URL bloqueada
+	 * 
+	 * @param recuperarURL
+	 * @param chega_cliente_buffer
+	 * @param vai_cliente
+	 * @param conexao
+	 * @throws Exception
+	 */
 	public void salvarURLBlock(URL recuperarURL,	BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente,	Socket conexao) throws Exception {
 
 		URLConnection urlC = recuperarURL.openConnection();
-		urlC.connect();
+		BufferedReader paginaBloq = new BufferedReader(new InputStreamReader(urlC.getInputStream()));
+		
+		String teste = url;
+		String s[] = teste.split("\\."); 
+		
+		teste = (s[1] +".txt");
+		
+		OutputStream os = new FileOutputStream(teste);
+		OutputStreamWriter osw = new OutputStreamWriter(os);
+		BufferedWriter bw = new BufferedWriter(osw);
+		
+		String linhaSite;
+		while((linhaSite = paginaBloq.readLine()) != null ){
+			bw.write(linhaSite+"\r\n");
+		}
+		
+		bw.close();
 
+		Writer arquivo = new BufferedWriter(new FileWriter("URLSbarradas.txt", true));
+		arquivo.append(" A url " +url +"foi acessada pelo IP: " +ipCliente +".\r\n");
+		arquivo.close();		
+		
+		String i[] = ipCliente.split(":");
+		String salva = i[0];
+		
+		Writer arquivo2 = new BufferedWriter(new FileWriter("IPS.txt", true));
+		arquivo2.append(salva+"\r\n");
+		arquivo2.close();		
+			
 		String block = "Página bloqueada pelo administrador da rede. Favor entrar em contato com a administração.";
-		vai_cliente.writeBytes(block);
-
+		vai_cliente.writeBytes(block);		
+				
 		vai_cliente.close();
 		chega_cliente_buffer.close();
 		conexao.close();
@@ -271,15 +294,11 @@ public class TrataRequisicao implements Runnable {
 			verificaCliente();
 
 			if (verificaPermissaoPraPagina(tipoLista, url, listas) == true) {
-
-				adicionaSiteAcessado(url, acessos);
-				recuperaURL(recuperarURL, chega_cliente_buffer, vai_cliente,
-						conexao);
-
+				recuperaURL(recuperarURL, chega_cliente_buffer, vai_cliente,	conexao);
 			} else {
 				salvarURLBlock(recuperarURL, chega_cliente_buffer, vai_cliente,	conexao);
 			}
-
+		
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
