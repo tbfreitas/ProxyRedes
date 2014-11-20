@@ -1,14 +1,8 @@
 package br.com.core;
 
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -24,24 +18,102 @@ import java.util.ArrayList;
  *
  * */
 public class ProxyServer {
-	
+
+	static ArrayList<ClientesAcessaram> acessos = new ArrayList<ClientesAcessaram>();
+	static ArrayList<SitesAcessados> sites = new ArrayList<SitesAcessados>();
+
+	static boolean entrou = false;
+
+	static void lerIPS() throws IOException{
+		ClientesAcessaram auxiliar;
+
+		BufferedReader in = new BufferedReader(new FileReader("IPS.txt"));
+		String linha;	
+
+		while((linha =in.readLine())!= null){
+
+			for(ClientesAcessaram s : acessos){
+				auxiliar = s;
+
+				if(linha.equals(s.getIp())){
+
+					s.setRequisicao(s.getRequisicao() +1);
+					entrou = true;
+
+				}
+			}
+
+			if(!entrou){
+				auxiliar= new ClientesAcessaram();
+				auxiliar.setIp(linha);
+				auxiliar.setRequisicao(1);
+
+				acessos.add(auxiliar);
+				entrou =false;
+			}
+		}
+
+		for(ClientesAcessaram s : acessos){
+			System.out.println("O IP : " +s.getIp() + " acessou " +s.getRequisicao() +" vezes o Proxy."  );
+		}
+	}
+
+	static void lerURLSacessadas() throws IOException{
+		SitesAcessados auxiliar ;
+
+		BufferedReader in = new BufferedReader(new FileReader("URLSacessados.txt"));
+		String linha;	
+
+		entrou = false;
+
+		while((linha =in.readLine())!= null){
+
+			for(SitesAcessados s : sites){
+				auxiliar = s;
+
+				if(linha.equals(s.getSite())){			
+
+					s.setCont(s.getCont() +1);
+					entrou = true;
+				}			
+
+			}
+
+			if(!entrou){
+
+				auxiliar= new SitesAcessados();
+				auxiliar.setSite(linha);
+				auxiliar.setCont(1);
+
+				sites.add(auxiliar);
+				entrou =false;
+			}
+
+		}
+
+		for(SitesAcessados m : sites){
+			System.out.println(m.getCont()+"  --   "+m.getSite());
+		}
+	}
+
+
 	public static void main(String[] args) throws IOException {
-		
+
 		int porta = new Integer(args[0]);
 		InetAddress ip = InetAddress.getByName(args[1]);
 		String tipoLista = args[2];
 		String modoBloqueio;
-			
+
 		GerenciadorConexoes gerenciador = new GerenciadorConexoes();
 		Thread gc = new Thread( (Runnable) (gerenciador));
 		gc.start();
-		
+
 		if(tipoLista.equals("b")){
 			modoBloqueio = "BlackList.";
 		}else{
 			modoBloqueio = "WhiteList.";
 		}
-		
+
 		/**
 		 *  Impressão para de parâmetros passados ao servidor
 		 * */
@@ -55,25 +127,26 @@ public class ProxyServer {
 		 * Abertura do servidor Socket que recebe os parametros passados
 		 */
 		ServerSocket conexao = new ServerSocket(porta, 50, ip);
-		
-		
+
+
 		while(!gerenciador.finish()){
-								
-				Socket conex = conexao.accept();
-							 		 
-				 Runnable requisicao = new TrataRequisicao(conex, tipoLista);
-				 
-				 Thread	thread = new Thread(requisicao);
-				 
-				 thread.start();
-				 
-				gerenciador.addCliente(thread);			
-				
+
+			Socket conex = conexao.accept();
+
+			Runnable requisicao = new TrataRequisicao(conex, tipoLista);
+
+			Thread	thread = new Thread(requisicao);
+			
+			thread.start();
+			
+			gerenciador.addCliente(thread);			
+
 		}
-		
+
+		lerIPS();
 	}
 }
 
 
-	
+
 

@@ -3,7 +3,6 @@ package br.com.core;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -16,8 +15,8 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Formatter;
 import java.util.StringTokenizer;
+import java.util.Timer;
 import java.net.*;
 
 public class TrataRequisicao implements Runnable {
@@ -27,11 +26,12 @@ public class TrataRequisicao implements Runnable {
 	ArrayList<String> listas = new ArrayList<>();
 	String ipCliente;
 	String url;
-	ArrayList<SitesAcessados> acessos = new ArrayList<SitesAcessados>();
 	DataOutputStream vai_cliente;
 	BufferedReader chega_cliente_buffer;
 	String requisicao;
 	final static String CRLF = "\r\n";
+	Timer timer ;
+
 	URL recuperarURL;
 
 	/**
@@ -74,31 +74,30 @@ public class TrataRequisicao implements Runnable {
 	public void pegaRequisicao(BufferedReader chega_cliente_buffer)
 			throws IOException {
 
-		requisicao = chega_cliente_buffer.readLine();
-
-		// Transformando a string numa StringTokenizer para recuperar a URL
 		try{
+			requisicao = chega_cliente_buffer.readLine();
+
 			StringTokenizer tokens = new StringTokenizer(requisicao);
 			tokens.nextToken();
 			url = tokens.nextToken();
-		}catch (Exception e){
-			e.printStackTrace();
-			
-		}
-		
-		// Se a url nao comecar com http, eh concatenada na String
-		// para não dar erro
+		}catch(Exception e){
+			e.toString();
+			System.out.println(e);
+		}	
 
-		if(!url.startsWith("http")) {
-			url = "http://"+url;
-		}
+		if(!url.equals(null)){
 
-		try {
-			recuperarURL = new URL(url);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			if(!url.startsWith("http")) {
+				url = "http://"+url;
+			}
 
+			try {
+				recuperarURL = new URL(url);
+			} catch (Exception e) {
+				e.toString();
+				System.out.println(e);
+			}
+		}
 	}
 
 	/**
@@ -171,7 +170,7 @@ public class TrataRequisicao implements Runnable {
 	public String verificaCliente() {
 
 		return ipCliente = conexao.getRemoteSocketAddress().toString();
-		
+
 	}
 
 	/**
@@ -191,20 +190,26 @@ public class TrataRequisicao implements Runnable {
 
 		String i[] = ipCliente.split(":");
 		String salva = i[0];
-		
+
 		Writer arquivo2 = new BufferedWriter(new FileWriter("IPS.txt", true));
 		arquivo2.append(salva+"\r\n");
 		arquivo2.close();
-		
+
 		arquivo2 = new BufferedWriter(new FileWriter("URLSacessados.txt", true));
 		arquivo2.append(url+"\r\n");
 		arquivo2.close();
-		
-		URLConnection urlC = recuperarURL.openConnection();
 
-		InputStream in = urlC.getInputStream();
-		sendBytes(in, vai_cliente);			
-		
+		URLConnection urlC = recuperarURL.openConnection();
+		try{
+
+			InputStream in = urlC.getInputStream();
+			sendBytes(in, vai_cliente);
+
+		}catch(Exception e){
+			e.toString();
+			System.out.println(e);
+		}
+
 		vai_cliente.close();
 		chega_cliente_buffer.close();
 		conexao.close();
@@ -247,37 +252,37 @@ public class TrataRequisicao implements Runnable {
 
 		URLConnection urlC = recuperarURL.openConnection();
 		BufferedReader paginaBloq = new BufferedReader(new InputStreamReader(urlC.getInputStream()));
-		
+
 		String teste = url;
 		String s[] = teste.split("\\."); 
-		
+
 		teste = (s[1] +".txt");
-		
+
 		OutputStream os = new FileOutputStream(teste);
 		OutputStreamWriter osw = new OutputStreamWriter(os);
 		BufferedWriter bw = new BufferedWriter(osw);
-		
+
 		String linhaSite;
 		while((linhaSite = paginaBloq.readLine()) != null ){
 			bw.write(linhaSite+"\r\n");
 		}
-		
+
 		bw.close();
 
 		Writer arquivo = new BufferedWriter(new FileWriter("URLSbarradas.txt", true));
 		arquivo.append(" A url " +url +"foi acessada pelo IP: " +ipCliente +".\r\n");
 		arquivo.close();		
-		
+
 		String i[] = ipCliente.split(":");
 		String salva = i[0];
-		
+
 		Writer arquivo2 = new BufferedWriter(new FileWriter("IPS.txt", true));
 		arquivo2.append(salva+"\r\n");
 		arquivo2.close();		
-			
+
 		String block = "Página bloqueada pelo administrador da rede. Favor entrar em contato com a administração.";
 		vai_cliente.writeBytes(block);		
-				
+
 		vai_cliente.close();
 		chega_cliente_buffer.close();
 		conexao.close();
@@ -294,11 +299,13 @@ public class TrataRequisicao implements Runnable {
 			verificaCliente();
 
 			if (verificaPermissaoPraPagina(tipoLista, url, listas) == true) {
+				//adicionaSite(url);
 				recuperaURL(recuperarURL, chega_cliente_buffer, vai_cliente,	conexao);
+
 			} else {
 				salvarURLBlock(recuperarURL, chega_cliente_buffer, vai_cliente,	conexao);
 			}
-		
+
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

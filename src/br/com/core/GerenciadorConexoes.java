@@ -1,5 +1,6 @@
 package br.com.core;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Scanner;
 
@@ -48,7 +49,21 @@ public class GerenciadorConexoes  implements Runnable{
 				}
 				
 				exit = true;
+				
 				System.out.println("Programa fechado com sucesso!");
+				System.out.println();
+				try {
+					System.out.println("Número de requisições feitas por IP's:");
+					ProxyServer.lerIPS();
+					System.out.println();
+					System.out.println("Nº - Site:");
+					ProxyServer.lerURLSacessadas();
+				
+				
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		}
 	}
