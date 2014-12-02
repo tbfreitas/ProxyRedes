@@ -1,0 +1,1 @@
+ A url http://www.google.com.br/foi acessada pelo IP: /127.0.0.1:49736.

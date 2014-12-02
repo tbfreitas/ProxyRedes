@@ -1,7 +1,7 @@
 package br.com.core;
 
-public class SitesAcessados {
-	
+public class SitesAcessados implements Comparable<SitesAcessados> {
+
 	private String site;
 	private int cont;
 	
@@ -17,4 +17,16 @@ public class SitesAcessados {
 	public void setCont(int cont) {
 		this.cont = cont;
 	}
+	@Override
+	public int compareTo(SitesAcessados site) {
+		if(this.cont > site.cont){
+			return -1;
+		}
+		else if(this.cont < site.cont){
+			return 1;
+		}
+		return 0;
+	}
+
+	
 }

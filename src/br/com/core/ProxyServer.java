@@ -7,6 +7,9 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 
 
 /**
@@ -15,8 +18,8 @@ import java.util.ArrayList;
  * 
  * @author Tarcísio
  *
- *
  * */
+
 public class ProxyServer {
 
 	static ArrayList<ClientesAcessaram> acessos = new ArrayList<ClientesAcessaram>();
@@ -45,13 +48,15 @@ public class ProxyServer {
 
 			if(!entrou){
 				auxiliar= new ClientesAcessaram();
+				
 				auxiliar.setIp(linha);
 				auxiliar.setRequisicao(1);
-
 				acessos.add(auxiliar);
 				entrou =false;
 			}
 		}
+
+		Collections.sort(acessos);
 
 		for(ClientesAcessaram s : acessos){
 			System.out.println("O IP : " +s.getIp() + " acessou " +s.getRequisicao() +" vezes o Proxy."  );
@@ -82,6 +87,7 @@ public class ProxyServer {
 			if(!entrou){
 
 				auxiliar= new SitesAcessados();
+				
 				auxiliar.setSite(linha);
 				auxiliar.setCont(1);
 
@@ -91,9 +97,22 @@ public class ProxyServer {
 
 		}
 
+		Collections.sort(sites);
+
 		for(SitesAcessados m : sites){
 			System.out.println(m.getCont()+"  --   "+m.getSite());
 		}
+	}
+	
+	static void lerURLSbarradas() throws Exception{
+		
+		BufferedReader in = new BufferedReader(new FileReader("URLSbarradas.txt"));
+		String linha;	
+
+		while((linha = in.readLine()) != null){
+			System.out.println(linha);
+		}
+		
 	}
 
 
@@ -123,9 +142,7 @@ public class ProxyServer {
 		System.out.println("O IP do servidor é o " +ip);
 		System.out.println("O tipo de lista é a " +modoBloqueio);
 		System.out.println("");
-		/**
-		 * Abertura do servidor Socket que recebe os parametros passados
-		 */
+
 		ServerSocket conexao = new ServerSocket(porta, 50, ip);
 
 
@@ -133,17 +150,16 @@ public class ProxyServer {
 
 			Socket conex = conexao.accept();
 
-			Runnable requisicao = new TrataRequisicao(conex, tipoLista);
+			Runnable requisicao = new TrataRequisicao(conex, tipoLista, ip);
 
 			Thread	thread = new Thread(requisicao);
-			
+
 			thread.start();
-			
+
 			gerenciador.addCliente(thread);			
 
 		}
 
-		lerIPS();
 	}
 }
 

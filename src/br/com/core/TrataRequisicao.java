@@ -13,10 +13,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
-import java.util.Timer;
 import java.net.*;
 
 public class TrataRequisicao implements Runnable {
@@ -30,19 +30,22 @@ public class TrataRequisicao implements Runnable {
 	BufferedReader chega_cliente_buffer;
 	String requisicao;
 	final static String CRLF = "\r\n";
-	Timer timer ;
-
+	long tempoInicial;
+	long tempoFinal;
 	URL recuperarURL;
+	InetAddress ip;
 
 	/**
 	 * Constructor
 	 * 
 	 * @param conexao
 	 * @param tipoLista
+	 * @param ip 
 	 */
-	public TrataRequisicao(Socket conexao, String tipoLista) {
+	public TrataRequisicao(Socket conexao, String tipoLista, InetAddress ip) {
 		this.conexao = conexao;
 		this.tipoLista = tipoLista;
+		this.ip = ip;
 	}
 
 	/**
@@ -80,25 +83,31 @@ public class TrataRequisicao implements Runnable {
 			StringTokenizer tokens = new StringTokenizer(requisicao);
 			tokens.nextToken();
 			url = tokens.nextToken();
+			
 		}catch(Exception e){
 			e.toString();
 			System.out.println(e);
 		}	
 
-		if(!url.equals(null)){
-
+		try {
+			
+			if(url.isEmpty()){
+				System.out.println("TÁ VAZIA ESSA URL");
+			}
+			
 			if(!url.startsWith("http")) {
+	
 				url = "http://"+url;
 			}
-
-			try {
-				recuperarURL = new URL(url);
-			} catch (Exception e) {
-				e.toString();
-				System.out.println(e);
-			}
+		
+			recuperarURL = new URL(url);
+			
+		} catch (Exception e) {
+		
+			System.out.println(e);
 		}
 	}
+	
 
 	/**
 	 * Classe que grava em um arrayList todos os sites da white ou  black lists,
@@ -165,12 +174,12 @@ public class TrataRequisicao implements Runnable {
 
 	/**
 	 * Método para verificar IP do cliente e porta utilizada pelo mesmo e jogar numa String
-	 * imprimir
+	 * imprimir junto com a URL requisitada
 	 */
-	public String verificaCliente() {
+	public void verificaCliente() {
 
-		return ipCliente = conexao.getRemoteSocketAddress().toString();
-
+		 ipCliente = conexao.getRemoteSocketAddress().toString();
+	
 	}
 
 	/**
@@ -186,7 +195,7 @@ public class TrataRequisicao implements Runnable {
 	 * @param conexao
 	 * @throws Exception
 	 */
-	public void recuperaURL(URL recuperarURL,BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente,Socket conexao) throws Exception {
+	synchronized public void recuperaURL(URL recuperarURL,BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente,Socket conexao) throws Exception {
 
 		String i[] = ipCliente.split(":");
 		String salva = i[0];
@@ -200,16 +209,26 @@ public class TrataRequisicao implements Runnable {
 		arquivo2.close();
 
 		URLConnection urlC = recuperarURL.openConnection();
+		
 		try{
-
+				
+			tempoInicial = System.currentTimeMillis();   
+			
 			InputStream in = urlC.getInputStream();
 			sendBytes(in, vai_cliente);
-
+			
+			 tempoFinal = System.currentTimeMillis(); 
+			 tempoFinal = tempoFinal - tempoInicial;
+			
 		}catch(Exception e){
 			e.toString();
 			System.out.println(e);
 		}
 
+		arquivo2 = new BufferedWriter(new FileWriter("TempoPagina.txt", true));
+		arquivo2.append(tempoFinal+ " ms : " +url +"\r\n");
+		arquivo2.close();		
+		
 		vai_cliente.close();
 		chega_cliente_buffer.close();
 		conexao.close();
@@ -248,7 +267,7 @@ public class TrataRequisicao implements Runnable {
 	 * @param conexao
 	 * @throws Exception
 	 */
-	public void salvarURLBlock(URL recuperarURL,	BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente,	Socket conexao) throws Exception {
+	synchronized public void salvarURLBlock(URL recuperarURL,	BufferedReader chega_cliente_buffer, DataOutputStream vai_cliente,	Socket conexao) throws Exception {
 
 		URLConnection urlC = recuperarURL.openConnection();
 		BufferedReader paginaBloq = new BufferedReader(new InputStreamReader(urlC.getInputStream()));
@@ -299,12 +318,24 @@ public class TrataRequisicao implements Runnable {
 			verificaCliente();
 
 			if (verificaPermissaoPraPagina(tipoLista, url, listas) == true) {
-				//adicionaSite(url);
-				recuperaURL(recuperarURL, chega_cliente_buffer, vai_cliente,	conexao);
+				recuperaURL(recuperarURL, chega_cliente_buffer, vai_cliente,conexao);
+				
+				System.out.println("IP CLIENTE E PORTA :");
+				System.out.println(ipCliente);
+				System.out.println("URL DE DESTINO :");
+				System.out.println(url);
+				System.out.println("IP DE DESTINO");
+				System.out.println(ip);
+				System.out.println("TEMPO PARA RECUPERAR A PÁGINA:");
+				System.out.println(tempoFinal+ " ms .");
+				System.out.println();
 
 			} else {
+				
 				salvarURLBlock(recuperarURL, chega_cliente_buffer, vai_cliente,	conexao);
 			}
+			
+			
 
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
